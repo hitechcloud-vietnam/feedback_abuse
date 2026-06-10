@@ -40,7 +40,8 @@ class feedback_abuse_user_controller extends HBController
         $this->template->assign('modulename', $this->module->getModuleName());
         $this->template->assign('modname',    $this->module->getModName());
         $this->template->assign('moduleid',   $this->module->getModuleId());
-        $this->template->assign('lang', $this->module->getLang());
+        $lang = (is_object($this->module) && method_exists($this->module, 'getLang')) ? $this->module->getLang() : array();
+        $this->template->assign('lang', $this->pickLang($lang));
         $this->template->assign('enabled_types', $this->module->enabledTypes());
         $this->template->assign('allow_attachments', $this->module->boolConfig('allow_attachments', true));
         $this->template->assign('csrf_token', $this->csrfToken());
@@ -58,7 +59,7 @@ class feedback_abuse_user_controller extends HBController
             return;
         }
         $clientId = (int) $this->authorization->get_id();
-        $items = HBLoader::LoadModel('feedback_abuse_report')
+        $items = \Other\feedback_abuse\ORM\Report::query()
             ->where('client_id', $clientId)
             ->orderBy('submitted_at', 'desc')
             ->limit(20)
@@ -72,7 +73,7 @@ class feedback_abuse_user_controller extends HBController
         $id = (int) (isset($params['id']) ? $params['id'] : 0);
         $clientId = (int) $this->authorization->get_id();
         $report = $id > 0
-            ? HBLoader::LoadModel('feedback_abuse_report')
+            ? \Other\feedback_abuse\ORM\Report::query()
                 ->where('id', $id)
                 ->where('client_id', $clientId)
                 ->first()
@@ -141,5 +142,30 @@ class feedback_abuse_user_controller extends HBController
     {
         $base = Utilities::checkSecureURL(HBConfig::getConfig('InstallURL'));
         return $base . '?cmd=' . strtolower($this->module->getModuleDirName()) . '&action=submit';
+    }
+
+    /**
+     * Pick the appropriate language pack.  Mirrors class.module.php
+     * core logic: current engine language first, english fallback.
+     */
+    protected function pickLang(array $lang)
+    {
+        $code = 'english';
+        try {
+            $eng = Engine::singleton();
+            if (is_object($eng) && method_exists($eng, 'getLanguage')) {
+                $code = (string) $eng->getLanguage();
+            }
+        } catch (\Exception $ignored) {}
+        if (isset($lang[$code]) && is_array($lang[$code])) {
+            return $lang[$code];
+        }
+        if (isset($lang['english']) && is_array($lang['english'])) {
+            return $lang['english'];
+        }
+        foreach ($lang as $v) {
+            if (is_array($v)) { return $v; }
+        }
+        return array();
     }
 }

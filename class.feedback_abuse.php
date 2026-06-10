@@ -19,23 +19,62 @@
  *                    3rd-party sites (signed HMAC token required to POST)
  *   - Admin:         admin/class.feedback_abuse_controller.php + default.tpl
  *   - Storage:       6 Eloquent-mapped tables, install.sql with ######
- *   - Events:        Observer — fires after_report to dispatch email/admin
- *                    notifications and trigger abuse-handler integrations.
+ *   - Events:        Event handler — after_report and after_status_change
+ *                    dispatch notifications and integration hooks.
  *
  * @package  Other\feedback_abuse
- * @version  1.0.0
+ * @version  1.0.1
  * @license  Commercial — © 2026 Pho Tue SoftWare And Technology Solutions Joint Stock Company
  */
-class feedback_abuse extends OtherModule implements Observer
+class feedback_abuse extends OtherModule
 {
     /** Schema version — bump to trigger upgrade(). */
-    protected $version = '1.0.0';
+     protected $version = '1.0.1';
 
     /** Admin-portal label. */
     protected $modname = 'Feedback & Abuse Reports';
 
     /** Short description. */
     protected $description = 'Public & client-side feedback, abuse, phishing, malware, botnet, spam, and domain-abuse report forms. Embeddable widget for 3rd-party sites.';
+
+    /**
+     * Register an autoloader for the module's ORM namespace.
+     *
+     * HostBill's PSR-0 autoloader (hbf/core/class.autoload.php) maps
+     * `class.<lowercase>.php` flat — it does NOT handle the
+     * `Other\feedback_abuse\ORM\…` namespace used by our Eloquent
+     * models.  We register a tiny PSR-4-style loader once on construct
+     * so controllers can `new \Other\feedback_abuse\ORM\Report` (or
+     * `HBLoader::LoadModel` if the core ever grows support for it).
+     */
+    public function __construct()
+    {
+        parent::__construct();
+
+        // One-shot autoloader registration.
+        static $registered = false;
+        if (!$registered) {
+            $registered = true;
+            spl_autoload_register(function ($class) {
+                $prefix = 'Other\\feedback_abuse\\ORM\\';
+                if (strpos($class, $prefix) !== 0) {
+                    return;
+                }
+                $rel   = substr($class, strlen($prefix));
+                $parts = explode('\\', $rel);
+                $file  = 'class.' . strtolower(array_pop($parts)) . '.php';
+                $path  = __DIR__ . DS . 'orm' . DS . $file;
+                if (is_file($path)) {
+                    require_once $path;
+                }
+            });
+        }
+
+        $log = HBConfig::getSetting('admin_login');
+        if (is_array($log) && !empty($log['id'])) {
+            $this->admin_id = (int) $log['id'];
+        }
+    }
 
     /**
      * HostBill feature flags.
@@ -49,14 +88,14 @@ class feedback_abuse extends OtherModule implements Observer
      */
     protected $info = array(
         'haveadmin'       => true,
-        'haveuser'        => false,
+        'haveuser'        => true,
         'havetpl'         => true,
         'haveapi'         => true,
         'havecron'        => true,
         'isobserver'      => true,
         'extras_menu'     => true,
-        'leftmenu'        => false,
-        'client_mainmenu' => false,
+        'leftmenu'        => true,
+        'client_mainmenu' => true,
     );
 
     /** Table name constants (used by ORM + raw queries). */
@@ -397,15 +436,6 @@ class feedback_abuse extends OtherModule implements Observer
     /** @var string current report-types as CSV (cached). */
     protected $enabledTypesCsv = null;
 
-    public function __construct()
-    {
-        parent::__construct();
-        $log = HBConfig::getSetting('admin_login');
-        if (is_array($log) && !empty($log['id'])) {
-            $this->admin_id = (int) $log['id'];
-        }
-    }
-
     // -------------------------------------------------------------------
     //  Lifecycle
     // -------------------------------------------------------------------
@@ -615,5 +645,35 @@ class feedback_abuse extends OtherModule implements Observer
         // the controller.  This is intentional — settings module
         // has its own locking semantics.
         return true;
+    }
+
+    // -------------------------------------------------------------------
+    //  Public accessors (proxy the protected Module properties)
+    // -------------------------------------------------------------------
+
+    /**
+     * Public accessor for the module's PDO connection.  Mirrors the
+     * pattern in `referral_program::getDatabase()` so lib classes
+     * (and the API controller) can call `$module->getDatabase()`
+     * without reaching into the protected `Module::$db` directly.
+     *
+     * @return PDO
+     */
+    public function getDatabase()
+    {
+        return $this->db;
+    }
+
+    /**
+     * Public accessor for the language pack array.  Controllers
+     * (admin / user) and the embed widget need to expose strings to
+     * Smarty templates; since $lang is `protected` on the base
+     * Module, we expose it through a small getter.
+     *
+     * @return array<string,array<string,string>>
+     */
+    public function getLang()
+    {
+        return is_array($this->lang) ? $this->lang : array();
     }
 }

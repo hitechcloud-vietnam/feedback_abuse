@@ -3,12 +3,11 @@
 /**
  * Public JSON API for the Feedback & Abuse module.
  *
- * Routes (registered in api/feedback_abuse_apiroutes.json):
+ * Routes (registered by HostBill User API metadata/cache):
  *   POST   /api/feedback_abuse/submit            — public submit (form widget + API)
  *   GET    /api/feedback_abuse/status/{publicId} — public status read (rate-limited)
- *   POST   /api/feedback_abuse/embed_token       — admin-only: issue embed token
- *   POST   /api/feedback_abuse/embed_revoke      — admin-only: revoke embed token
  *   GET    /api/feedback_abuse/types             — public: list enabled report types
+ *   OPTIONS /api/feedback_abuse/{any}             — CORS preflight for embedded forms
  *
  * The submit endpoint is the public, anonymous, embed-friendly entry
  * point.  It accepts multipart/form-data (so file attachments work) and
@@ -30,12 +29,18 @@ class feedback_abuse_apiroutes
     }
 
     /**
-     * POST /api/feedback_abuse/submit
+     * Submit feedback or abuse report.
+     *
+     * Accepts multipart/form-data and returns `{ok, public_id, id}` on success.
+     *
+     * @route POST /feedback_abuse/submit
+     * @auth false
+     * @category Support Public feedback and abuse report endpoints.
      */
     public function submit()
     {
         header('Content-Type: application/json; charset=utf-8');
-        if (!$this->module || !$this->module->boolConfig('public_api_enabled', true)) {
+        if (!$this->moduleBoolConfig('public_api_enabled', true)) {
             http_response_code(404);
             echo json_encode(array('ok' => false, 'error' => 'not_found'));
             return;
@@ -74,7 +79,14 @@ class feedback_abuse_apiroutes
             'message'   => isset($_POST['message'])   ? (string) $_POST['message']   : '',
         );
 
-        $svc = new \Other\feedback_abuse\ReportService($this->module, $this->module->getDatabase());
+        $db = $this->moduleDatabase();
+        if (!$db) {
+            http_response_code(503);
+            echo json_encode(array('ok' => false, 'error' => 'module_unavailable'));
+            return;
+        }
+
+        $svc = new \Other\feedback_abuse\ReportService($this->module, $db);
         $out = $svc->submit($input, $ctx, $_FILES);
 
         if (!empty($out['ok'])) {
@@ -102,7 +114,11 @@ class feedback_abuse_apiroutes
     }
 
     /**
-     * GET /api/feedback_abuse/status/{publicId}
+     * Read public report status.
+     *
+     * @route GET /feedback_abuse/status/$publicId
+     * @auth false
+     * @category Support Public feedback and abuse report endpoints.
      */
     public function status($publicId = '')
     {
@@ -116,14 +132,20 @@ class feedback_abuse_apiroutes
         }
         // Lightweight rate limit (per IP).
         $ip = Utilities::REMOTE_ADDR();
-        $rl = new \Other\feedback_abuse\RateLimiter($this->module->getDatabase());
+        $db = $this->moduleDatabase();
+        if (!$db) {
+            http_response_code(503);
+            echo json_encode(array('ok' => false, 'error' => 'module_unavailable'));
+            return;
+        }
+        $rl = new \Other\feedback_abuse\RateLimiter($db);
         $hits = $rl->hit($ip, 'status');
         if ($hits > 60) {
             http_response_code(429);
             echo json_encode(array('ok' => false, 'error' => 'rate_limited'));
             return;
         }
-        $row = HBLoader::LoadModel('feedback_abuse_report')
+        $row = \Other\feedback_abuse\ORM\Report::query()
             ->where('public_id', $publicId)
             ->first(array('id', 'public_id', 'type', 'status', 'severity', 'submitted_at', 'updated_at'));
         if (!$row) {
@@ -143,14 +165,65 @@ class feedback_abuse_apiroutes
     }
 
     /**
-     * GET /api/feedback_abuse/types — public list of enabled types.
+     * List enabled report types.
+     *
+     * @route GET /feedback_abuse/types
+     * @auth false
+     * @category Support Public feedback and abuse report endpoints.
      */
     public function types()
     {
         header('Content-Type: application/json; charset=utf-8');
         $this->corsHeaders();
-        $list = $this->module->enabledTypes();
+        $list = $this->moduleEnabledTypes();
         echo json_encode(array('ok' => true, 'types' => $list));
+    }
+
+    /**
+     * CORS preflight for embedded report forms.
+     *
+     * @route OPTIONS /feedback_abuse/$any
+     * @auth false
+     * @category Support Public feedback and abuse report endpoints.
+     */
+    public function _cors_preflight($any = '')
+    {
+        $this->corsHeaders();
+        http_response_code(204);
+        return;
+    }
+
+    /**
+     * Safe bool config accessor for partial/stale deployments.
+     */
+    protected function moduleBoolConfig($name, $default = false)
+    {
+        if (!$this->module || !method_exists($this->module, 'boolConfig')) {
+            return (bool) $default;
+        }
+        return $this->module->boolConfig($name, $default);
+    }
+
+    /**
+     * Safe database accessor for partial/stale deployments.
+     */
+    protected function moduleDatabase()
+    {
+        if (!$this->module || !method_exists($this->module, 'getDatabase')) {
+            return null;
+        }
+        return $this->module->getDatabase();
+    }
+
+    /**
+     * Safe enabled-type accessor for route listing and API calls.
+     */
+    protected function moduleEnabledTypes()
+    {
+        if ($this->module && method_exists($this->module, 'enabledTypes')) {
+            return $this->module->enabledTypes();
+        }
+        return array('feedback', 'phishing', 'malware', 'botnet', 'spam', 'domain_abuse', 'network_abuse');
     }
 
     /**

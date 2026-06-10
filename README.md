@@ -2,7 +2,7 @@
 
 > **Module slug:** `feedback_abuse`
 > **Base class:** `OtherModule`
-> **Version:** 1.0.0
+> **Version:** 1.0.1
 > **Owner:** Pho Tue SoftWare And Technology Solutions Joint Stock Company (MST: 0318222903)
 > **License:** Commercial — see [LICENSE](LICENSE)
 
@@ -34,7 +34,7 @@ All forms share the same 7 fields the user spec calls out:
 
 ```
 module_dev_hostbill/Other/feedback_abuse/
-├── class.feedback_abuse.php            ← main module class (OtherModule + Observer)
+├── class.feedback_abuse.php            ← main module class (OtherModule)
 ├── install.sql                         ← 6 tables, ###### separator
 ├── admin/
 │   ├── class.feedback_abuse_controller.php
@@ -65,7 +65,7 @@ module_dev_hostbill/Other/feedback_abuse/
 ├── cron/
 │   └── class.feedback_abuse_cron.php
 ├── event/
-│   └── class.feedback_abuse_handle.php ← Observer (after_report)
+│   └── class.feedback_abuse_handle.php ← Observer event methods
 ├── lang/                               ← reserved for per-language overrides
 ├── assets/, docs/, tests/              ← dev aids
 ├── README.md
@@ -147,8 +147,10 @@ Returns:
 | `/api/feedback_abuse/submit`         | POST | Submit a new report (multipart) |
 | `/api/feedback_abuse/status/{id}`    | GET  | Look up status by public_id |
 | `/api/feedback_abuse/types`          | GET  | List enabled report types |
+| `/api/feedback_abuse/{any}`          | OPTIONS | CORS preflight for embedded forms |
 
-Full route definitions live in `api/feedback_abuse_apiroutes.json`.
+HostBill User API route metadata is cached in `api/feedback_abuse_apiroutes.json`.
+The PHP route class also carries `@route` docblocks so the cache can be regenerated in `DEV_ENV`.
 
 ---
 
@@ -192,4 +194,5 @@ The widget can be force-set via the `language_default` config.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.0.1 | 2026-06-11 | Fixed HostBill User API route visibility by replacing malformed route cache metadata and adding `@route` docblocks. Hardened `getLang()` access to avoid stale-deploy fatals. |
 | 1.0.0 | 2026-06-11 | Initial release. 7 report types, embed widget, JSON API, admin dashboard, audit log. |

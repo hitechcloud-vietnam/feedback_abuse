@@ -1,37 +1,83 @@
 {
-  "name": "feedback_abuse",
-  "version": "1.0.0",
-  "base_path": "/api/feedback_abuse",
-  "routes": [
+  "file": "includes/modules/Other/feedback_abuse/api/class.feedback_abuse_apiroutes.php",
+  "class": "feedback_abuse_apiroutes",
+  "name": "Feedback & Abuse Reports API",
+  "description": "Public endpoints for submitting feedback and abuse reports, checking public report status, and listing enabled report types.",
+  "auth": false,
+  "category": [
     {
-      "method": "POST",
-      "path": "/submit",
-      "handler": "submit",
-      "auth": "none",
-      "description": "Submit a new report (feedback / phishing / malware / botnet / spam / domain_abuse / network_abuse). Multipart form-data. Returns JSON {ok, public_id}.",
-      "rate_limit": "10/hour/ip"
-    },
-    {
-      "method": "GET",
-      "path": "/status/{publicId}",
-      "handler": "status",
-      "auth": "none",
-      "description": "Look up the status of a previously submitted report by its public_id.",
-      "rate_limit": "60/hour/ip"
-    },
-    {
-      "method": "GET",
-      "path": "/types",
-      "handler": "types",
-      "auth": "none",
-      "description": "List report types currently enabled in the module configuration."
-    },
-    {
-      "method": "OPTIONS",
-      "path": "/{any}",
-      "handler": "_cors_preflight",
-      "auth": "none",
-      "description": "CORS preflight. Echoes the request's Origin."
+      "name": "Support",
+      "description": "Public feedback and abuse report endpoints."
     }
-  ]
+  ],
+  "route": {
+    "POST /feedback_abuse/submit": {
+      "name": "Submit feedback or abuse report.",
+      "description": "Accepts multipart/form-data and returns `{ok, public_id, id}` on success.",
+      "dynamic-desc": null,
+      "param": [],
+      "route": "POST /feedback_abuse/submit",
+      "auth": false,
+      "category": "Support",
+      "handle": "submit",
+      "uuid": "f2546d12ceee3d22044078799e20cf18",
+      "priority": 0,
+      "http": "POST",
+      "address": "/feedback_abuse/submit"
+    },
+    "GET /feedback_abuse/status/@publicId": {
+      "name": "Read public report status.",
+      "description": "Returns the public status for a submitted report by public_id.",
+      "dynamic-desc": null,
+      "param": [
+        {
+          "type": "string",
+          "name": "publicId",
+          "inurl": true
+        }
+      ],
+      "route": "GET /feedback_abuse/status/@publicId",
+      "auth": false,
+      "category": "Support",
+      "handle": "status",
+      "uuid": "159b405f48d2fc36d451f1e4cb973201",
+      "priority": 0,
+      "http": "GET",
+      "address": "/feedback_abuse/status/@publicId"
+    },
+    "GET /feedback_abuse/types": {
+      "name": "List enabled report types.",
+      "description": "Returns the report types currently enabled in module configuration.",
+      "dynamic-desc": null,
+      "param": [],
+      "route": "GET /feedback_abuse/types",
+      "auth": false,
+      "category": "Support",
+      "handle": "types",
+      "uuid": "0593af539f0a72d8278b133c16eb453c",
+      "priority": 0,
+      "http": "GET",
+      "address": "/feedback_abuse/types"
+    },
+    "OPTIONS /feedback_abuse/@any": {
+      "name": "CORS preflight for embedded report forms.",
+      "description": "Responds to browser CORS preflight requests for embedded feedback and abuse forms.",
+      "dynamic-desc": null,
+      "param": [
+        {
+          "type": "string",
+          "name": "any",
+          "inurl": true
+        }
+      ],
+      "route": "OPTIONS /feedback_abuse/@any",
+      "auth": false,
+      "category": "Support",
+      "handle": "_cors_preflight",
+      "uuid": "9fc335810fe03fd4fcbda6bb76b9400d",
+      "priority": 0,
+      "http": "OPTIONS",
+      "address": "/feedback_abuse/@any"
+    }
+  }
 }

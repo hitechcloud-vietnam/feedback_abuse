@@ -46,7 +46,8 @@ class feedback_abuse_controller extends HBController
         $this->template->assign('modulename', $this->module->getModuleName());
         $this->template->assign('modname', $this->module->getModName());
         $this->template->assign('moduleid', $this->module->getModuleId());
-        $this->template->assign('lang', $this->module->getLang());
+        $lang = (is_object($this->module) && method_exists($this->module, 'getLang')) ? $this->module->getLang() : array();
+        $this->template->assign('lang', $this->pickLang($lang));
         $this->template->assign('enabled_types', $this->module->enabledTypes());
         $this->template->assign('admin_id', (int) $log['id']);
         $this->template->showtpl = 'default';
@@ -67,7 +68,7 @@ class feedback_abuse_controller extends HBController
         $this->template->assign('q',      $q);
 
         /** @var \Other\feedback_abuse\ORM\Report $reportModel */
-        $reportModel = HBLoader::LoadModel('feedback_abuse_report');
+        $reportModel = \Other\feedback_abuse\ORM\Report::query();
         $qry = $reportModel->ofType($type)->ofStatus($status)->search($q)
             ->orderBy('submitted_at', 'desc');
 
@@ -87,7 +88,7 @@ class feedback_abuse_controller extends HBController
     {
         $id = (int) (isset($params['id']) ? $params['id'] : 0);
         $report = $id > 0
-            ? HBLoader::LoadModel('feedback_abuse_report')->find($id)
+            ? \Other\feedback_abuse\ORM\Report::query()->find($id)
             : null;
         if (!$report) {
             Engine::addInfo('Report not found');
@@ -118,7 +119,7 @@ class feedback_abuse_controller extends HBController
             Utilities::redirect($this->adminUrl('view&id=' . $id));
             return;
         }
-        $report = $id > 0 ? HBLoader::LoadModel('feedback_abuse_report')->find($id) : null;
+        $report = $id > 0 ? \Other\feedback_abuse\ORM\Report::query()->find($id) : null;
         if (!$report) {
             Utilities::redirect($this->adminUrl());
             return;
@@ -131,7 +132,21 @@ class feedback_abuse_controller extends HBController
         }
         $report->save();
         $svc = new \Other\feedback_abuse\ReportService($this->module, $this->module->getDatabase());
-        $svc->writeAudit($id, 'admin', $this->adminId(), 'status_changed', $from, $to, null, Utilities::REMOTE_ADDR());
+        $adminId = $this->adminId();
+        $ip = Utilities::REMOTE_ADDR();
+        $svc->writeAudit($id, 'admin', $adminId, 'status_changed', $from, $to, null, $ip);
+        try {
+            if (class_exists('\\HBEventManager')) {
+                \HBEventManager::notify('after_status_change', array(
+                    'module'    => 'feedback_abuse',
+                    'report_id' => $id,
+                    'admin_id'  => $adminId,
+                    'from'      => $from,
+                    'to'        => $to,
+                    'ip'        => $ip,
+                ));
+            }
+        } catch (\Exception $ignored) { /* best-effort */ }
         Engine::addInfo('Status updated');
         Utilities::redirect($this->adminUrl('view&id=' . $id));
     }
@@ -142,7 +157,7 @@ class feedback_abuse_controller extends HBController
         $this->assertPost();
         $id  = (int) (isset($params['id']) ? $params['id'] : 0);
         $aid = (int) (isset($params['aid']) ? $params['aid'] : 0);
-        $report = $id > 0 ? HBLoader::LoadModel('feedback_abuse_report')->find($id) : null;
+        $report = $id > 0 ? \Other\feedback_abuse\ORM\Report::query()->find($id) : null;
         if (!$report) {
             Utilities::redirect($this->adminUrl());
             return;
@@ -167,12 +182,12 @@ class feedback_abuse_controller extends HBController
             Utilities::redirect($this->adminUrl());
             return;
         }
-        $report = HBLoader::LoadModel('feedback_abuse_report')->find($id);
+        $report = \Other\feedback_abuse\ORM\Report::query()->find($id);
         if (!$report) {
             Utilities::redirect($this->adminUrl());
             return;
         }
-        HBLoader::LoadModel('feedback_abuse_note')->create(array(
+        \Other\feedback_abuse\ORM\Note::query()->create(array(
             'report_id'   => $id,
             'admin_id'    => $this->adminId(),
             'note'        => $text,
@@ -192,7 +207,7 @@ class feedback_abuse_controller extends HBController
     {
         $this->assertPost();
         $id = (int) (isset($params['id']) ? $params['id'] : 0);
-        $report = $id > 0 ? HBLoader::LoadModel('feedback_abuse_report')->find($id) : null;
+        $report = $id > 0 ? \Other\feedback_abuse\ORM\Report::query()->find($id) : null;
         if (!$report) {
             Utilities::redirect($this->adminUrl());
             return;
@@ -218,7 +233,7 @@ class feedback_abuse_controller extends HBController
     public function tokens($params)
     {
         $this->template->assign('active_view', 'tokens');
-        $tokens = HBLoader::LoadModel('feedback_abuse_token')->orderBy('issued_at', 'desc')->get();
+        $tokens = \Other\feedback_abuse\ORM\Token::query()->orderBy('issued_at', 'desc')->get();
         $this->template->assign('tokens', $tokens);
     }
 
@@ -248,7 +263,7 @@ class feedback_abuse_controller extends HBController
                 null, $issued['token_id'], array('origin' => $origin, 'label' => $label), Utilities::REMOTE_ADDR());
             // Show secret exactly once.
             $this->template->assign('active_view', 'tokens');
-            $this->template->assign('tokens', HBLoader::LoadModel('feedback_abuse_token')->orderBy('issued_at', 'desc')->get());
+            $this->template->assign('tokens', \Other\feedback_abuse\ORM\Token::query()->orderBy('issued_at', 'desc')->get());
             $this->template->assign('issued_secret', $issued['secret']);
             $this->template->assign('issued_token_id', $issued['token_id']);
             return;
@@ -288,7 +303,7 @@ class feedback_abuse_controller extends HBController
     {
         $aid = (int) (isset($params['aid']) ? $params['aid'] : 0);
         $att = $aid > 0
-            ? HBLoader::LoadModel('feedback_abuse_attachment')->find($aid)
+            ? \Other\feedback_abuse\ORM\Attachment::query()->find($aid)
             : null;
         if (!$att) {
             Engine::addInfo('Attachment not found');
@@ -317,7 +332,7 @@ class feedback_abuse_controller extends HBController
         $type   = isset($params['type'])   ? (string) $params['type']   : 'all';
         $status = isset($params['status']) ? (string) $params['status'] : 'all';
         $q      = isset($params['q'])      ? (string) $params['q']      : '';
-        $qry = HBLoader::LoadModel('feedback_abuse_report')
+        $qry = \Other\feedback_abuse\ORM\Report::query()
             ->ofType($type)->ofStatus($status)->search($q)
             ->orderBy('submitted_at', 'desc');
         header('Content-Type: text/csv; charset=utf-8');
@@ -395,5 +410,32 @@ class feedback_abuse_controller extends HBController
             $rows = array();
         }
         return $rows ?: array(array('id' => 0, 'login' => '—'));
+    }
+
+    /**
+     * Pick the appropriate language pack from the module's $lang array.
+     * Mirrors the engine logic in class.module.php — current language
+     * first, then english as fallback.
+     */
+    protected function pickLang(array $lang)
+    {
+        $code = 'english';
+        try {
+            $eng = Engine::singleton();
+            if (is_object($eng) && method_exists($eng, 'getLanguage')) {
+                $code = (string) $eng->getLanguage();
+            }
+        } catch (\Exception $ignored) {}
+        if (isset($lang[$code]) && is_array($lang[$code])) {
+            return $lang[$code];
+        }
+        if (isset($lang['english']) && is_array($lang['english'])) {
+            return $lang['english'];
+        }
+        // Return first available key.
+        foreach ($lang as $k => $v) {
+            if (is_array($v)) { return $v; }
+        }
+        return array();
     }
 }

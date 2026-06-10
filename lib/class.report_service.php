@@ -132,22 +132,19 @@ class ReportService
             return array('ok' => false, 'error' => 'submit_failed');
         }
 
-        // Fire after_report event (Observer).  Listeners can:
+        // Fire the HostBill after_report event. Listeners can:
         //  - send notification email to the configured admin address
         //  - push to an external abuse handler (Spamhaus, Google SafeBrowsing)
         //  - open a HostBill ticket
         try {
-            if (isset($this->module) && $this->module instanceof \Observer) {
-                // Dispatch a custom pseudo-event via HBEventManager if available.
-                if (class_exists('\\HBEventManager')) {
-                    \HBEventManager::dispatch('after_report', array(
-                        'module'  => 'feedback_abuse',
-                        'report_id' => $reportId,
-                        'public_id' => $publicId,
-                        'type'    => $type,
-                        'email'   => $input['email'],
-                    ));
-                }
+            if (class_exists('\\HBEventManager')) {
+                \HBEventManager::notify('after_report', array(
+                    'module'    => 'feedback_abuse',
+                    'report_id' => $reportId,
+                    'public_id' => $publicId,
+                    'type'      => $type,
+                    'email'     => $input['email'],
+                ));
             }
         } catch (\Exception $ignored) { /* best-effort */ }
 

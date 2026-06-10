@@ -62,9 +62,9 @@ Public methods on the main class `feedback_abuse`:
 
 Event hooks (Observer):
 
-- `notify($event)` in `event/class.feedback_abuse_handle.php` dispatches:
-  - `after_report`         — email + audit
-  - `after_status_change`  — audit
+- `after_report($params)` in `event/class.feedback_abuse_handle.php` — email + audit.
+- `after_status_change($params)` in `event/class.feedback_abuse_handle.php` — audit.
+- Producers emit both events through `HBEventManager::notify(...)`.
 
 Cron:
 
@@ -98,11 +98,16 @@ Cron:
 
 Detected Observer hooks:
 
-- `notify()` on the `feedback_abuse_handle` class dispatches `after_report` and `after_status_change`.
+- `feedback_abuse_handle::after_report($params)` handles new report notifications.
+- `feedback_abuse_handle::after_status_change($params)` handles status-change auditing.
 
-`HBEventManager`-style listeners (auto-dispatched via `HBEventManager::dispatch` from `ReportService::submit`):
+`HBEventManager` listeners (emitted through `HBEventManager::notify`):
 
 - `after_report` — payload: `module`, `report_id`, `public_id`, `type`, `email`.
+- `after_status_change` — payload: `module`, `report_id`, `admin_id`, `from`, `to`, `ip`.
+
+HostBill discovers the public event methods and rebuilds `hb_event_handles`
+when the module is activated or upgraded.
 
 ## 8. Database schema
 

@@ -23,22 +23,29 @@
 class Widget_feedback_form extends ServicesWidget
 {
     /** @var string */
-    public $widgetfullname = 'Submit Feedback / Report Abuse';
+    protected $widgetfullname = 'Submit Feedback / Report Abuse';
 
     /** @var string */
-    public $description = 'Public form for general feedback, phishing, malware, botnet, spam, and domain-abuse reports. Embeddable on 3rd-party sites.';
+    protected $description = 'Public form for general feedback, phishing, malware, botnet, spam, and domain-abuse reports. Embeddable on 3rd-party sites.';
 
-    /** Visible by default, configurable, multiple-instance. */
-    public $options = 2;
+    /** @var array HostBill ServicesWidget metadata. Template is selected in controller(). */
+    protected $info = array(
+        'appendtpl'  => false,
+        'replacetpl' => false,
+        'options'    => 2,
+    );
 
     /**
      * Always available (we want it on every page, including logout).
      * The `doesApply()` check below still enforces module enable flag.
      */
-    public function doesApply()
+    public function doesApply(&$module)
     {
-        $module = HBLoader::LoadModule('Other/feedback_abuse');
-        if (!$module || !$module->boolConfig('enabled', true)) {
+        $feedbackModule = HBLoader::LoadModule('Other/feedback_abuse');
+        if (!$feedbackModule) {
+            return false;
+        }
+        if (method_exists($feedbackModule, 'boolConfig') && !$feedbackModule->boolConfig('enabled', true)) {
             return false;
         }
         return true;
@@ -47,36 +54,54 @@ class Widget_feedback_form extends ServicesWidget
     /**
      * Render the form inline (or the iframe source if `?embed=1`).
      */
-    public function controller()
+    public function controller($service, &$module, &$smarty, &$params)
     {
-        $module = HBLoader::LoadModule('Other/feedback_abuse');
-        $lang   = $module->getLang();
+        $feedbackModule = HBLoader::LoadModule('Other/feedback_abuse');
 
         // Detect visitor language preference.
         $langCode = $this->detectLanguage();
-        $strings  = isset($lang[$langCode]) ? $lang[$langCode] : $lang['english'];
+        $lang     = ($feedbackModule && method_exists($feedbackModule, 'getLang')) ? $feedbackModule->getLang() : array();
+        $strings  = isset($lang[$langCode]) ? $lang[$langCode] : (isset($lang['english']) ? $lang['english'] : array());
 
         $isEmbed  = (isset($_GET['embed']) && $_GET['embed'] == '1');
         $token    = isset($_GET['token']) ? (string) $_GET['token'] : '';
         $origin   = isset($_GET['origin']) ? (string) $_GET['origin'] : '';
+        $enabledTypes = ($feedbackModule && method_exists($feedbackModule, 'enabledTypes'))
+            ? $feedbackModule->enabledTypes()
+            : array('feedback', 'phishing', 'malware', 'botnet', 'spam', 'domain_abuse', 'network_abuse');
+        $allowAttachments = ($feedbackModule && method_exists($feedbackModule, 'boolConfig')) ? $feedbackModule->boolConfig('allow_attachments', true) : true;
+        $requireCaptcha = ($feedbackModule && method_exists($feedbackModule, 'boolConfig')) ? $feedbackModule->boolConfig('require_captcha', false) : false;
+        $allowedExts = ($feedbackModule && method_exists($feedbackModule, 'allowedExtensions'))
+            ? $feedbackModule->allowedExtensions()
+            : array('txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip');
+        $maxFileSizeMb = ($feedbackModule && method_exists($feedbackModule, 'strConfig')) ? (int) $feedbackModule->strConfig('max_file_size_mb', '10') : 10;
 
-        $this->view->assign('lang',          $strings);
-        $this->view->assign('lang_code',     $langCode);
-        $this->view->assign('is_embed',      $isEmbed);
-        $this->view->assign('embed_token',   $token);
-        $this->view->assign('embed_origin',  $origin);
-        $this->view->assign('enabled_types', $module->enabledTypes());
-        $this->view->assign('allow_attachments', $module->boolConfig('allow_attachments', true));
-        $this->view->assign('require_captcha',   $module->boolConfig('require_captcha', false));
-        $this->view->assign('csrf_token',     $this->csrfToken());
-        $this->view->assign('form_action',   $this->formAction($isEmbed, $token, $origin));
-        $this->view->assign('submit_url',    $this->submitUrl($isEmbed));
-        $this->view->assign('allowed_exts',  $module->allowedExtensions());
-        $this->view->assign('max_file_size_mb', (int) $module->strConfig('max_file_size_mb', '10'));
+        $smarty->assign('lang',          $strings);
+        $smarty->assign('lang_code',     $langCode);
+        $smarty->assign('is_embed',      $isEmbed);
+        $smarty->assign('embed_token',   $token);
+        $smarty->assign('embed_origin',  $origin);
+        $smarty->assign('enabled_types', $enabledTypes);
+        $smarty->assign('allow_attachments', $allowAttachments);
+        $smarty->assign('require_captcha',   $requireCaptcha);
+        $smarty->assign('csrf_token',     $this->csrfToken());
+        $smarty->assign('form_action',   $this->formAction($isEmbed, $token, $origin));
+        $smarty->assign('submit_url',    $this->submitUrl($isEmbed));
+        $smarty->assign('allowed_exts',  $allowedExts);
+        $smarty->assign('max_file_size_mb', $maxFileSizeMb);
 
         // Pick template variant.
-        $tpl = $isEmbed ? 'widget_feedback_form_embed' : 'widget_feedback_form_inline';
-        $this->view->setTpl($tpl);
+        $this->setTemplate($isEmbed ? 'widget_feedback_form_embed.tpl' : 'widget_feedback_form_inline.tpl');
+    }
+
+    /**
+     * Select the Smarty template using HostBill's ServicesWidget metadata flow.
+     */
+    protected function setTemplate($template)
+    {
+        $this->info['appendtpl'] = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'widget_templates' . DIRECTORY_SEPARATOR . $template;
+        $this->info['replacetpl'] = false;
+        unset($this->info['appendaftertpl']);
     }
 
     /**
@@ -89,7 +114,7 @@ class Widget_feedback_form extends ServicesWidget
             return 'vietnamese';
         }
         $module = HBLoader::LoadModule('Other/feedback_abuse');
-        $default = (string) $module->strConfig('language_default', 'english');
+        $default = ($module && method_exists($module, 'strConfig')) ? (string) $module->strConfig('language_default', 'english') : 'english';
         return in_array($default, array('english', 'vietnamese'), true) ? $default : 'english';
     }
 

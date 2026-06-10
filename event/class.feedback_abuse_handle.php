@@ -3,8 +3,8 @@
 /**
  * Event observer for the Feedback & Abuse module.
  *
- * Implements HostBill's `Observer` interface.  The class is auto-loaded
- * when the module fires one of the supported hooks:
+ * Implements HostBill's `Observer` interface. The class is auto-loaded
+ * when the module fires one of the supported events:
  *
  *   - after_report       — fired by ReportService::submit() on a new report
  *   - after_status_change— fired by the admin controller
@@ -33,22 +33,25 @@ class feedback_abuse_handle implements Observer
     }
 
     /**
-     * HostBill event entry point.  Signature accepts any event payload
-     * the dispatcher hands us.  We dispatch on the 'event' key.
+     * Handle a newly persisted report.
+     *
+     * HostBill binds event names directly to public methods on this class.
      *
      * @param array $event
      */
-    public function notify($event)
+    public function after_report($event)
     {
-        $name = is_array($event) && isset($event['event']) ? (string) $event['event'] : '';
-        switch ($name) {
-            case 'after_report':
-                $this->onAfterReport($event);
-                break;
-            case 'after_status_change':
-                $this->onAfterStatusChange($event);
-                break;
-        }
+        $this->onAfterReport(is_array($event) ? $event : array());
+    }
+
+    /**
+     * Handle a report status change made by an administrator.
+     *
+     * @param array $event
+     */
+    public function after_status_change($event)
+    {
+        $this->onAfterStatusChange(is_array($event) ? $event : array());
     }
 
     /**
@@ -148,7 +151,13 @@ class feedback_abuse_handle implements Observer
         );
         try {
             if (class_exists('\\Mailer')) {
-                \Mailer::sendMail($to, $subject, $body, false);
+                $mailer = new \Mailer();
+                $mailer->AddAddress($to);
+                $mailer->Subject = $subject;
+                $mailer->Body = $body;
+                $mailer->AltBody = $body;
+                $mailer->IsHTML(false);
+                $mailer->Send();
             } else {
                 @mail($to, $subject, $body, 'From: noreply@' . (HBConfig::getConfig('ServerName') ?: 'localhost'));
             }

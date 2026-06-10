@@ -40,7 +40,7 @@
     <div class="fbw-row">
       <label for="fbw-email">{$lang.lbl_email|escape:'html'} <span class="req">*</span></label>
       <input id="fbw-email" name="email" type="email" class="fbw-input" required maxlength="190"
-             autocomplete="email" placeholder="{$lang.lbl_phone|escape:'html'}">
+             autocomplete="email" placeholder="{$lang.lbl_email|escape:'html'}">
     </div>
 
     {* URL / Website / Tên miền *}
