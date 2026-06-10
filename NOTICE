@@ -1,0 +1,18 @@
+Feedback & Abuse Reports — HostBill Module
+Copyright 2026 Pho Tue SoftWare And Technology Solutions Joint Stock Company (MST: 0318222903)
+
+This product includes software developed by
+Pho Tue SoftWare And Technology Solutions Joint Stock Company
+(https://photuesoftware.com)
+
+This product is intended to be installed as a module of the HostBill
+billing platform (https://www.hostbillapp.com), which is the property
+of HostBill Ltd. and is licensed separately to the end user.
+
+The module is provided "AS IS" without any warranty of any kind.
+See the LICENSE file for the full text of the commercial + MIT
+dual-license terms.
+
+For third-party license attributions applicable to the runtime
+environment (PHP, MySQL/MariaDB, web server, etc.) please refer to
+the corresponding upstream projects.

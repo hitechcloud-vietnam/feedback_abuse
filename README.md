@@ -3,7 +3,7 @@
 > **Module slug:** `feedback_abuse`
 > **Base class:** `OtherModule`
 > **Version:** 1.0.0
-> **Owner:** Pho Tue SoftWare And Technology Solutions JSC (MST: 0318222903)
+> **Owner:** Pho Tue SoftWare And Technology Solutions Joint Stock Company (MST: 0318222903)
 > **License:** Commercial — see [LICENSE](LICENSE)
 
 A single HostBill module that exposes the following report forms:

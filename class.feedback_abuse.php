@@ -24,7 +24,7 @@
  *
  * @package  Other\feedback_abuse
  * @version  1.0.0
- * @license  Commercial — © 2026 Pho Tue SoftWare And Technology Solutions JSC
+ * @license  Commercial — © 2026 Pho Tue SoftWare And Technology Solutions Joint Stock Company
  */
 class feedback_abuse extends OtherModule implements Observer
 {

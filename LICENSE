@@ -1,0 +1,44 @@
+Commercial License — Feedback & Abuse Reports Module
+
+Copyright (c) 2026 Pho Tue SoftWare And Technology Solutions Joint Stock Company
+(MST: 0318222903)
+All rights reserved.
+
+This module is dual-licensed:
+
+  (a) For internal use by the licensee who obtained it from the
+      official Pho Tue SoftWare distribution channel, the module is
+      licensed under the MIT License (see below).
+
+  (b) For redistribution, sub-licensing, or inclusion in a
+      HostBill-resold product, a separate commercial agreement is
+      required.  Contact: sales@photuesoftware.com
+
+------------------------------------------------------------------------
+MIT License (internal use)
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sub-license, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+------------------------------------------------------------------------
+Third-party components
+
+This module does NOT bundle any third-party libraries.  The only
+external dependency is the HostBill core framework, which is the
+property of HostBill Ltd. and is licensed separately to the licensee.
