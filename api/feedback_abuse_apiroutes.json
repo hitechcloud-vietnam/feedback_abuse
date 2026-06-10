@@ -1,0 +1,37 @@
+{
+  "name": "feedback_abuse",
+  "version": "1.0.0",
+  "base_path": "/api/feedback_abuse",
+  "routes": [
+    {
+      "method": "POST",
+      "path": "/submit",
+      "handler": "submit",
+      "auth": "none",
+      "description": "Submit a new report (feedback / phishing / malware / botnet / spam / domain_abuse / network_abuse). Multipart form-data. Returns JSON {ok, public_id}.",
+      "rate_limit": "10/hour/ip"
+    },
+    {
+      "method": "GET",
+      "path": "/status/{publicId}",
+      "handler": "status",
+      "auth": "none",
+      "description": "Look up the status of a previously submitted report by its public_id.",
+      "rate_limit": "60/hour/ip"
+    },
+    {
+      "method": "GET",
+      "path": "/types",
+      "handler": "types",
+      "auth": "none",
+      "description": "List report types currently enabled in the module configuration."
+    },
+    {
+      "method": "OPTIONS",
+      "path": "/{any}",
+      "handler": "_cors_preflight",
+      "auth": "none",
+      "description": "CORS preflight. Echoes the request's Origin."
+    }
+  ]
+}
