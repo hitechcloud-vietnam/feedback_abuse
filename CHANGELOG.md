@@ -2,6 +2,12 @@
 
 All notable changes to the Feedback & Abuse Reports module are documented here.
 
+## [1.0.2] - 2026-06-11
+
+### Fixed
+- Replaced admin report-list and CSV export local-scope chains with explicit query filters to avoid PHP 8 fatal `count(null)` in older Illuminate `Builder::callScope()` bundled with HostBill.
+- Renamed the client-area controller class to `feedback_abuse_Controller` so HostBill's user controller loader can instantiate `?cmd=feedback_abuse` without `Class not found`.
+
 ## [1.0.1] - 2026-06-11
 
 ### Fixed

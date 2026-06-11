@@ -2,7 +2,7 @@
 
 > **Module slug:** `feedback_abuse`
 > **Base class:** `OtherModule`
-> **Version:** 1.0.1
+> **Version:** 1.0.2
 > **Owner:** Pho Tue SoftWare And Technology Solutions Joint Stock Company (MST: 0318222903)
 > **License:** Commercial — see [LICENSE](LICENSE)
 
@@ -194,5 +194,6 @@ The widget can be force-set via the `language_default` config.
 
 | Version | Date | Change |
 |---|---|---|
+| 1.0.2 | 2026-06-11 | Fixed admin report-list/CSV filters on PHP 8 by avoiding old Illuminate local-scope `count(null)` behavior. Fixed client-area controller class naming for HostBill loader compatibility. |
 | 1.0.1 | 2026-06-11 | Fixed HostBill User API route visibility by replacing malformed route cache metadata and adding `@route` docblocks. Hardened `getLang()` access to avoid stale-deploy fatals. |
 | 1.0.0 | 2026-06-11 | Initial release. 7 report types, embed widget, JSON API, admin dashboard, audit log. |

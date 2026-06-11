@@ -67,9 +67,7 @@ class feedback_abuse_controller extends HBController
         $this->template->assign('status', $status);
         $this->template->assign('q',      $q);
 
-        /** @var \Other\feedback_abuse\ORM\Report $reportModel */
-        $reportModel = \Other\feedback_abuse\ORM\Report::query();
-        $qry = $reportModel->ofType($type)->ofStatus($status)->search($q)
+        $qry = $this->buildReportQuery($type, $status, $q)
             ->orderBy('submitted_at', 'desc');
 
         $total = (clone $qry)->count();
@@ -332,8 +330,7 @@ class feedback_abuse_controller extends HBController
         $type   = isset($params['type'])   ? (string) $params['type']   : 'all';
         $status = isset($params['status']) ? (string) $params['status'] : 'all';
         $q      = isset($params['q'])      ? (string) $params['q']      : '';
-        $qry = \Other\feedback_abuse\ORM\Report::query()
-            ->ofType($type)->ofStatus($status)->search($q)
+        $qry = $this->buildReportQuery($type, $status, $q)
             ->orderBy('submitted_at', 'desc');
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="feedback_abuse_' . date('Ymd_His') . '.csv"');
@@ -377,6 +374,49 @@ class feedback_abuse_controller extends HBController
     {
         $base = '?cmd=' . $this->module->getModuleDirName();
         return $action === '' ? $base : $base . '&' . $action;
+    }
+
+    /**
+     * Build the report list query without Eloquent local scopes.
+     *
+     * Older Illuminate versions bundled with HostBill leave QueryBuilder::$wheres
+     * as null until the first constraint is added. PHP 8+ turns the local-scope
+     * callScope() `count($query->wheres)` into a fatal before our no-op scopes can
+     * return, so admin filters must use direct where clauses instead of ofType(),
+     * ofStatus(), and search().
+     */
+    protected function buildReportQuery($type = 'all', $status = 'all', $term = '')
+    {
+        $qry = \Other\feedback_abuse\ORM\Report::query();
+
+        $type = trim((string) $type);
+        if ($type !== '' && $type !== 'all') {
+            $qry->where('type', $type);
+        }
+
+        $status = trim((string) $status);
+        if ($status !== '' && $status !== 'all') {
+            if ($status === 'open') {
+                $qry->whereNotIn('status', array('closed', 'rejected'));
+            } else {
+                $qry->where('status', $status);
+            }
+        }
+
+        $term = trim((string) $term);
+        if ($term !== '') {
+            $like = '%' . str_replace(array('%', '_'), array('\\%', '\\_'), $term) . '%';
+            $qry->where(function ($w) use ($like) {
+                $w->where('message',   'like', $like)
+                  ->orWhere('email',   'like', $like)
+                  ->orWhere('full_name','like', $like)
+                  ->orWhere('url',     'like', $like)
+                  ->orWhere('subject', 'like', $like)
+                  ->orWhere('public_id','like', $like);
+            });
+        }
+
+        return $qry;
     }
 
     protected function statusCounts()

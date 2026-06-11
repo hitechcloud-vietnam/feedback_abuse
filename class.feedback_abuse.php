@@ -23,13 +23,13 @@
  *                    dispatch notifications and integration hooks.
  *
  * @package  Other\feedback_abuse
- * @version  1.0.1
+ * @version  1.0.2
  * @license  Commercial — © 2026 Pho Tue SoftWare And Technology Solutions Joint Stock Company
  */
 class feedback_abuse extends OtherModule
 {
     /** Schema version — bump to trigger upgrade(). */
-     protected $version = '1.0.1';
+    protected $version = '1.0.2';
 
     /** Admin-portal label. */
     protected $modname = 'Feedback & Abuse Reports';

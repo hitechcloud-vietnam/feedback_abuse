@@ -16,7 +16,7 @@
  *
  * @package  Other\feedback_abuse\user
  */
-class feedback_abuse_user_controller extends HBController
+class feedback_abuse_Controller extends HBController
 {
     /** @var feedback_abuse */
     public $module;
